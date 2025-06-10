@@ -59,10 +59,12 @@ use datafusion::execution::options::ReadOptions;
 use async_trait::async_trait;
 
 use self::file_format::OrcFormat;
+pub use self::source::OrcSource;
 
 mod file_format;
 mod object_store_reader;
 mod physical_exec;
+mod source;
 
 /// Configuration options for reading ORC files.
 #[derive(Clone)]

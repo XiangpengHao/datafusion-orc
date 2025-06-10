@@ -15,24 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::any::Any;
-use std::fmt::{self, Debug};
 use std::sync::Arc;
 
 use arrow::error::ArrowError;
 use datafusion::arrow::datatypes::SchemaRef;
-use datafusion::datasource::physical_plan::{
-    FileMeta, FileOpenFuture, FileOpener, FileScanConfig, FileStream,
-};
+use datafusion::datasource::physical_plan::{FileMeta, FileOpenFuture, FileOpener};
 use datafusion::error::Result;
-use datafusion::execution::context::TaskContext;
-use datafusion::physical_plan::execution_plan::{Boundedness, EmissionType};
-use datafusion::physical_plan::metrics::{ExecutionPlanMetricsSet, MetricsSet};
-use datafusion::physical_plan::{
-    DisplayAs, DisplayFormatType, ExecutionPlan, Partitioning, PlanProperties,
-    SendableRecordBatchStream,
-};
-use datafusion_physical_expr::EquivalenceProperties;
+use datafusion::physical_plan::metrics::ExecutionPlanMetricsSet;
+
 use orc_rust::projection::ProjectionMask;
 use orc_rust::ArrowReaderBuilder;
 
@@ -41,112 +31,15 @@ use object_store::ObjectStore;
 
 use super::object_store_reader::ObjectStoreReader;
 
-#[derive(Debug, Clone)]
-pub struct OrcExec {
-    config: FileScanConfig,
-    metrics: ExecutionPlanMetricsSet,
-    properties: PlanProperties,
-}
-
-impl OrcExec {
-    pub fn new(config: FileScanConfig) -> Self {
-        let metrics = ExecutionPlanMetricsSet::new();
-        let (projected_schema, _, _, orderings) = config.project();
-        let properties = PlanProperties::new(
-            EquivalenceProperties::new_with_orderings(projected_schema, &orderings),
-            Partitioning::UnknownPartitioning(config.file_groups.len()),
-            EmissionType::Incremental,
-            Boundedness::Bounded,
-        );
-        Self {
-            config,
-            metrics,
-            properties,
-        }
-    }
-}
-
-impl DisplayAs for OrcExec {
-    fn fmt_as(&self, t: DisplayFormatType, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "OrcExec: ")?;
-        self.config.fmt_as(t, f)
-    }
-}
-
-impl ExecutionPlan for OrcExec {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn name(&self) -> &str {
-        "OrcExec"
-    }
-
-    fn children(&self) -> Vec<&Arc<dyn ExecutionPlan>> {
-        vec![]
-    }
-
-    fn with_new_children(
-        self: Arc<Self>,
-        _: Vec<Arc<dyn ExecutionPlan>>,
-    ) -> Result<Arc<dyn ExecutionPlan>> {
-        Ok(self)
-    }
-
-    fn properties(&self) -> &PlanProperties {
-        &self.properties
-    }
-
-    fn metrics(&self) -> Option<MetricsSet> {
-        Some(self.metrics.clone_inner())
-    }
-
-    fn execute(
-        &self,
-        partition_index: usize,
-        context: Arc<TaskContext>,
-    ) -> Result<SendableRecordBatchStream> {
-        let projection: Vec<_> = self
-            .config
-            .projection
-            .as_ref()
-            .map(|p| {
-                // FileScanConfig::file_column_projection_indices
-                p.iter()
-                    .filter(|col_idx| **col_idx < self.config.file_schema.fields().len())
-                    .copied()
-                    .collect()
-            })
-            .unwrap_or_else(|| (0..self.config.file_schema.fields().len()).collect());
-
-        let object_store = context
-            .runtime_env()
-            .object_store(&self.config.object_store_url)?;
-
-        let opener = Arc::new(OrcOpener {
-            _partition_index: partition_index,
-            projection,
-            batch_size: context.session_config().batch_size(),
-            _limit: self.config.limit,
-            table_schema: self.config.file_schema.clone(),
-            _metrics: self.metrics.clone(),
-            object_store,
-        });
-
-        let stream = FileStream::new(&self.config, partition_index, opener, &self.metrics)?;
-        Ok(Box::pin(stream))
-    }
-}
-
 // TODO: make use of the unused fields (e.g. implement metrics)
-struct OrcOpener {
-    _partition_index: usize,
-    projection: Vec<usize>,
-    batch_size: usize,
-    _limit: Option<usize>,
-    table_schema: SchemaRef,
-    _metrics: ExecutionPlanMetricsSet,
-    object_store: Arc<dyn ObjectStore>,
+pub struct OrcOpener {
+    pub _partition_index: usize,
+    pub projection: Vec<usize>,
+    pub batch_size: usize,
+    pub _limit: Option<usize>,
+    pub table_schema: SchemaRef,
+    pub _metrics: ExecutionPlanMetricsSet,
+    pub object_store: Arc<dyn ObjectStore>,
 }
 
 impl FileOpener for OrcOpener {

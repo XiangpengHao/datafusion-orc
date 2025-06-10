@@ -27,6 +27,7 @@ use datafusion::common::Statistics;
 use datafusion::datasource::file_format::file_compression_type::FileCompressionType;
 use datafusion::datasource::file_format::FileFormat;
 use datafusion::datasource::physical_plan::{FileScanConfig, FileSource};
+use datafusion::datasource::source::DataSourceExec;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion_physical_expr::PhysicalExpr;
@@ -39,7 +40,7 @@ use object_store::path::Path;
 use object_store::{ObjectMeta, ObjectStore};
 
 use super::object_store_reader::ObjectStoreReader;
-use super::physical_exec::OrcExec;
+use super::source::OrcSource;
 
 async fn fetch_schema(store: &Arc<dyn ObjectStore>, file: &ObjectMeta) -> Result<(Path, Schema)> {
     let loc_path = file.location.clone();
@@ -123,10 +124,10 @@ impl FileFormat for OrcFormat {
         conf: FileScanConfig,
         _filters: Option<&Arc<dyn PhysicalExpr>>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        Ok(Arc::new(OrcExec::new(conf)))
+        Ok(DataSourceExec::from_data_source(conf))
     }
 
     fn file_source(&self) -> Arc<dyn FileSource> {
-        unimplemented!()
+        Arc::new(OrcSource::default())
     }
 }
