@@ -46,8 +46,8 @@ impl AsyncChunkReader for ObjectStoreReader {
         offset_from_start: u64,
         length: u64,
     ) -> BoxFuture<'_, std::io::Result<Bytes>> {
-        let offset_from_start = offset_from_start as usize;
-        let length = length as usize;
+        let offset_from_start = offset_from_start;
+        let length = length;
         let range = offset_from_start..(offset_from_start + length);
         self.store
             .get_range(&self.file.location, range)

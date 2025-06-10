@@ -22,12 +22,12 @@ use std::sync::Arc;
 
 use arrow::datatypes::Schema;
 use datafusion::arrow::datatypes::SchemaRef;
+use datafusion::catalog::Session;
 use datafusion::common::Statistics;
 use datafusion::datasource::file_format::file_compression_type::FileCompressionType;
 use datafusion::datasource::file_format::FileFormat;
-use datafusion::datasource::physical_plan::FileScanConfig;
+use datafusion::datasource::physical_plan::{FileScanConfig, FileSource};
 use datafusion::error::{DataFusionError, Result};
-use datafusion::execution::context::SessionState;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion_physical_expr::PhysicalExpr;
 use futures::TryStreamExt;
@@ -78,7 +78,7 @@ impl FileFormat for OrcFormat {
 
     async fn infer_schema(
         &self,
-        state: &SessionState,
+        state: &dyn Session,
         store: &Arc<dyn ObjectStore>,
         objects: &[ObjectMeta],
     ) -> Result<SchemaRef> {
@@ -109,7 +109,7 @@ impl FileFormat for OrcFormat {
 
     async fn infer_stats(
         &self,
-        _state: &SessionState,
+        _state: &dyn Session,
         _store: &Arc<dyn ObjectStore>,
         table_schema: SchemaRef,
         _object: &ObjectMeta,
@@ -119,10 +119,14 @@ impl FileFormat for OrcFormat {
 
     async fn create_physical_plan(
         &self,
-        _state: &SessionState,
+        _state: &dyn Session,
         conf: FileScanConfig,
         _filters: Option<&Arc<dyn PhysicalExpr>>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
         Ok(Arc::new(OrcExec::new(conf)))
+    }
+
+    fn file_source(&self) -> Arc<dyn FileSource> {
+        unimplemented!()
     }
 }

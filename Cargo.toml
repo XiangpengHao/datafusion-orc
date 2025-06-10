@@ -32,17 +32,17 @@ rust-version = "1.73"
 all-features = true
 
 [dependencies]
-arrow = { version = "53", features = ["prettyprint", "chrono-tz"] }
-async-trait = { version = "0.1.77" }
-bytes = "1.4"
-datafusion = { version = "42.0" }
-datafusion-expr = { version = "42.0" }
-datafusion-physical-expr = { version = "42.0" }
+arrow = { version = "55", features = ["prettyprint", "chrono-tz"] }
+async-trait = { version = "0.1.88" }
+bytes = "1.10"
+datafusion = { version = "47.0" }
+datafusion-expr = { version = "47.0" }
+datafusion-physical-expr = { version = "47.0" }
 futures = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3" }
-object_store = { version = "0.11" }
-orc-rust = { version = "0.5", features = ["async"] }
-tokio = { version = "1.28", features = [
+object_store = { version = "0.12" }
+orc-rust = { git = "https://github.com/XiangpengHao/orc-rust.git", features = ["async"] }
+tokio = { version = "1.45", features = [
     "io-util",
     "sync",
     "fs",
@@ -52,12 +52,12 @@ tokio = { version = "1.28", features = [
 ] }
 
 [dev-dependencies]
-arrow-ipc = { version = "53.0.0", features = ["lz4"] }
-arrow-json = "53.0.0"
+arrow-ipc = { version = "55.0.0", features = ["lz4"] }
+arrow-json = "55.0.0"
 criterion = { version = "0.5", default-features = false, features = ["async_tokio"] }
 opendal = { version = "0.48", default-features = false, features = ["services-memory"] }
-pretty_assertions = "1.3.0"
-proptest = "1.0.0"
+pretty_assertions = "1.4.1"
+proptest = "1.7.0"
 serde_json = { version = "1.0", default-features = false, features = ["std"] }
 
 [[example]]

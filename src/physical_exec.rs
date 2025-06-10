@@ -26,9 +26,10 @@ use datafusion::datasource::physical_plan::{
 };
 use datafusion::error::Result;
 use datafusion::execution::context::TaskContext;
+use datafusion::physical_plan::execution_plan::{Boundedness, EmissionType};
 use datafusion::physical_plan::metrics::{ExecutionPlanMetricsSet, MetricsSet};
 use datafusion::physical_plan::{
-    DisplayAs, DisplayFormatType, ExecutionMode, ExecutionPlan, Partitioning, PlanProperties,
+    DisplayAs, DisplayFormatType, ExecutionPlan, Partitioning, PlanProperties,
     SendableRecordBatchStream,
 };
 use datafusion_physical_expr::EquivalenceProperties;
@@ -50,11 +51,12 @@ pub struct OrcExec {
 impl OrcExec {
     pub fn new(config: FileScanConfig) -> Self {
         let metrics = ExecutionPlanMetricsSet::new();
-        let (projected_schema, _, orderings) = config.project();
+        let (projected_schema, _, _, orderings) = config.project();
         let properties = PlanProperties::new(
             EquivalenceProperties::new_with_orderings(projected_schema, &orderings),
             Partitioning::UnknownPartitioning(config.file_groups.len()),
-            ExecutionMode::Bounded,
+            EmissionType::Incremental,
+            Boundedness::Bounded,
         );
         Self {
             config,
@@ -121,7 +123,7 @@ impl ExecutionPlan for OrcExec {
             .runtime_env()
             .object_store(&self.config.object_store_url)?;
 
-        let opener = OrcOpener {
+        let opener = Arc::new(OrcOpener {
             _partition_index: partition_index,
             projection,
             batch_size: context.session_config().batch_size(),
@@ -129,7 +131,7 @@ impl ExecutionPlan for OrcExec {
             table_schema: self.config.file_schema.clone(),
             _metrics: self.metrics.clone(),
             object_store,
-        };
+        });
 
         let stream = FileStream::new(&self.config, partition_index, opener, &self.metrics)?;
         Ok(Box::pin(stream))
